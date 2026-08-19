@@ -90,6 +90,24 @@ in
         '';
       };
 
+      envVars = lib.mkOption {
+        type = lib.types.submodule {
+          freeformType = lib.types.attrsOf (
+            lib.types.oneOf [
+              lib.types.bool
+              lib.types.int
+              lib.types.float
+              lib.types.str
+            ]
+          );
+        };
+        example = {
+          LLAMA_FOO = "bar";
+        };
+        default = { };
+        description = "Environment variables used by llama-cpp.";
+      };
+
       openFirewall = lib.mkOption {
         type = lib.types.bool;
         default = false;
@@ -125,7 +143,11 @@ in
         StateDirectory = "llama-cpp";
         CacheDirectory = "llama-cpp";
         WorkingDirectory = "/var/lib/llama-cpp";
-        Environment = [ "LLAMA_CACHE=/var/cache/llama-cpp" ];
+        Environment =
+          lib.mapAttrsToList (k: v: "${k}=${if lib.isBool v then lib.boolToString v else toString v}") (
+            lib.filterAttrs (k: _: k != "LLAMA_CACHE") cfg.envVars
+          )
+          ++ [ "LLAMA_CACHE=/var/cache/llama-cpp" ];
 
         AmbientCapabilities = [ "" ];
         CapabilityBoundingSet = [ "" ];
